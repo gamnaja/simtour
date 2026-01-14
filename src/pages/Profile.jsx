@@ -130,7 +130,7 @@ const Profile = ({ user }) => {
 
             <section style={{ marginBottom: '2rem' }}>
                 <h3 style={{ padding: '0 1rem', fontSize: '1.1rem' }}>내 여행 목록</h3>
-                <div className="trip-list" style={{ padding: '0 1rem' }}>
+                <div className="trip-list grid grid-cols-1 sm-grid-cols-2" style={{ padding: '0 1rem' }}>
                     {userTrips.length > 0 ? userTrips.map(trip => (
                         <div
                             key={trip.id}

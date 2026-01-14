@@ -8,7 +8,11 @@ import {
     doc,
     getDoc,
     setDoc,
-    updateDoc
+    updateDoc,
+    collection,
+    getDocs,
+    query,
+    where
 } from 'firebase/firestore';
 import { auth, googleProvider, db } from './firebase';
 

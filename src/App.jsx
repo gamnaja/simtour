@@ -38,10 +38,13 @@ function App() {
     if (!user) {
         return (
             <div className="container" style={{ display: 'flex', height: '100vh', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
-                <h1 style={{ fontSize: '2.5rem', marginBottom: '1rem', fontFamily: 'var(--font-heading)' }}>Hokkaido Ski 2026</h1>
-                <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>여행 일정과 경비를 스마트하게 관리하세요</p>
-                <button onClick={handleLogin} className="btn btn-primary" style={{ padding: '1rem 2rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.1rem' }}>
-                    <LogIn size={20} /> 구글로 시작하기
+                <div style={{ marginBottom: '2.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <img src="/logo-v3.png" alt="SimTour Logo" style={{ width: '110px', height: '110px', marginBottom: '1.5rem', borderRadius: '24px', boxShadow: '0 8px 30px rgba(0,0,0,0.08)', objectFit: 'contain' }} />
+                    <h1 style={{ fontSize: '2.75rem', fontWeight: 800, color: 'var(--primary)', marginBottom: '0.5rem', fontFamily: 'var(--font-heading)', letterSpacing: '-0.03em' }}>SimTour</h1>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '1rem', fontWeight: 500 }}>Simple Tour, Smart Travel</p>
+                </div>
+                <button onClick={handleLogin} className="btn btn-primary" style={{ padding: '1.1rem 2.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '1.2rem', fontWeight: 700, borderRadius: '16px' }}>
+                    <LogIn size={24} /> 구글로 시작하기
                 </button>
             </div>
         )

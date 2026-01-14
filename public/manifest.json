@@ -1,0 +1,16 @@
+{
+    "short_name": "SimTour",
+    "name": "SimTour - Simple Tour",
+    "icons": [
+        {
+            "src": "/logo-v3.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ],
+    "start_url": ".",
+    "display": "standalone",
+    "theme_color": "#2563eb",
+    "background_color": "#ffffff"
+}

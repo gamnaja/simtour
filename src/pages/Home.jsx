@@ -63,13 +63,13 @@ const Home = ({ user }) => {
                 </Link>
             </nav>
 
-            <header style={{ padding: '1rem 0 3rem', textAlign: 'center' }}>
-                <h1 style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>여행 플래너</h1>
-                <p style={{ color: 'var(--text-muted)' }}>일정과 경비를 한눈에 관리하세요</p>
+            <header style={{ padding: '0.5rem 0 2rem', textAlign: 'center' }}>
+                <h1 style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--primary)', marginBottom: '0.25rem' }}>SimTour</h1>
+                <p style={{ color: 'var(--text-muted)', fontSize: '1rem' }}>Simple Tour, Smart Travel</p>
             </header>
 
-            <div className="trip-list">
-                <h2 style={{ fontSize: '1.25rem', marginBottom: '1rem' }}>진행 중인 여행</h2>
+            <div className="trip-list grid grid-cols-1 sm-grid-cols-2 lg-grid-cols-3">
+                <h2 style={{ fontSize: '1.25rem', marginBottom: '1rem', gridColumn: '1 / -1' }}>진행 중인 여행</h2>
                 {loading ? (
                     <div style={{ textAlign: 'center', padding: '2rem' }}>로딩 중...</div>
                 ) : trips.length > 0 ? trips.map(trip => (
@@ -109,7 +109,17 @@ const Home = ({ user }) => {
                 <button
                     onClick={() => setShowCreateModal(true)}
                     className="btn btn-primary"
-                    style={{ width: '100%', padding: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginTop: '1rem' }}>
+                    style={{
+                        width: '100%',
+                        maxWidth: '400px',
+                        margin: '1rem auto 0',
+                        padding: '1.25rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.5rem',
+                        gridColumn: '1 / -1'
+                    }}>
                     <Plus size={20} />
                     새 여행 만들기
                 </button>
