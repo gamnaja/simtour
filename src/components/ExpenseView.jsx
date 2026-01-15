@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react'
 import { Plus, Check, User, X, Edit2, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
 import { travelService } from '../services/travelService'
 import ConfirmModal from './ConfirmModal'
+import ContextMenu from './ContextMenu'
+import { useContextMenu } from '../hooks/useContextMenu'
 
 const ExpenseView = ({ trip, user, onRefreshTrip }) => { // Added onRefreshTrip prop
     const [view, setView] = useState('list')
@@ -21,6 +23,8 @@ const ExpenseView = ({ trip, user, onRefreshTrip }) => { // Added onRefreshTrip 
 
     // Delete Modal State
     const [deleteConfig, setDeleteConfig] = useState({ isOpen: false, id: null })
+
+    const { contextMenu, onContextMenu, onTouchStart, onTouchEnd, closeContextMenu } = useContextMenu()
 
     useEffect(() => {
         loadExpenses()
@@ -294,25 +298,18 @@ const ExpenseView = ({ trip, user, onRefreshTrip }) => { // Added onRefreshTrip 
     const ListView = () => (
         <div className="expense-list grid grid-cols-1 sm-grid-cols-2 lg-grid-cols-1" style={{ gap: '1rem' }}>
             {expenses.length > 0 ? expenses.map(exp => (
-                <div key={exp.id} className="card glass animate-fade" style={{ margin: 0 }}>
+                <div
+                    key={exp.id}
+                    className="card glass"
+                    style={{ margin: 0, userSelect: 'none', WebkitTouchCallout: 'none' }}
+                    onContextMenu={(e) => onContextMenu(e, exp)}
+                    onTouchStart={(e) => onTouchStart(e, exp)}
+                    onTouchEnd={onTouchEnd}
+                >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
                         <div style={{ flex: 1 }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                 <h4 style={{ margin: 0, fontSize: '1rem' }}>{exp.item}</h4>
-                                <div style={{ display: 'flex', gap: '0.25rem' }}>
-                                    <button onClick={() => handleEditExpense(exp)} style={{ background: 'none', border: 'none', padding: '0.25rem', color: 'var(--text-muted)', cursor: 'pointer' }}>
-                                        <Edit2 size={14} />
-                                    </button>
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation()
-                                            handleDeleteExpense(exp.id)
-                                        }}
-                                        style={{ background: 'none', border: 'none', padding: '0.25rem', color: '#dc2626', cursor: 'pointer', position: 'relative', zIndex: 10 }}
-                                    >
-                                        <Trash2 size={14} />
-                                    </button>
-                                </div>
                             </div>
                             <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '0.25rem 0' }}>
                                 {exp.payer} 결제 • {exp.isPersonal ? '개인' : `${exp.splitWith.length} 명`}
@@ -382,83 +379,90 @@ const ExpenseView = ({ trip, user, onRefreshTrip }) => { // Added onRefreshTrip 
             </div>
 
             {showAddForm && (
-                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
-                    <form onSubmit={handleAddExpense} className="card glass" style={{ width: '100%', maxWidth: '400px', background: 'white', padding: '2rem', borderRadius: '24px', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800 }}>지출 {editingExpense ? '수정' : '추가'}</h3>
-                            <button type="button" onClick={() => setShowAddForm(false)} style={{ background: 'none', border: 'none', padding: '0.5rem', cursor: 'pointer', color: 'var(--text-muted)' }}><X size={24} /></button>
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem', backdropFilter: 'blur(4px)' }}>
+                    <form onSubmit={handleAddExpense} className="card glass animate-fade" style={{ width: '100%', maxWidth: '400px', background: 'white', padding: '2rem', borderRadius: '32px', display: 'flex', flexDirection: 'column', gap: '1.5rem', boxShadow: '0 20px 50px rgba(0,0,0,0.2)', border: 'none' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.2rem' }}>
+                            <h3 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 900, letterSpacing: '-0.02em', color: '#1e293b' }}>지출 {editingExpense ? '수정' : '추가'}</h3>
+                            <button type="button" onClick={() => setShowAddForm(false)} style={{ background: 'rgba(0,0,0,0.05)', border: 'none', padding: '0.5rem', borderRadius: '50%', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={20} /></button>
                         </div>
 
-                        <div>
-                            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.5rem' }}>항목</label>
-                            <input
-                                placeholder="저녁 식사, 택시비 등"
-                                value={newExpense.item}
-                                onChange={e => setNewExpense({ ...newExpense, item: e.target.value })}
-                                required
-                                style={{ width: '100%', padding: '0.85rem', borderRadius: '12px', border: '2px solid var(--border)', fontSize: '1rem' }}
-                            />
-                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                            <div>
+                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: '#94a3b8', marginBottom: '0.6rem', marginLeft: '0.2rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>항목</label>
+                                <input
+                                    placeholder="어디에 쓰셨나요?"
+                                    value={newExpense.item}
+                                    onChange={e => setNewExpense({ ...newExpense, item: e.target.value })}
+                                    required
+                                    style={{ width: '100%', padding: '1rem', borderRadius: '16px', border: '1.5px solid #f1f5f9', fontSize: '1rem', background: '#f8fafc', transition: 'all 0.2s' }}
+                                    onFocus={(e) => { e.target.style.borderColor = 'var(--primary)'; e.target.style.background = 'white'; }}
+                                    onBlur={(e) => { e.target.style.borderColor = '#f1f5f9'; e.target.style.background = '#f8fafc'; }}
+                                />
+                            </div>
 
-                        <div style={{ marginBottom: '1.25rem' }}>
-                            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.5rem' }}>결제자 (누가 냈나요?)</label>
-                            <select
-                                value={newExpense.payer}
-                                onChange={e => setNewExpense({ ...newExpense, payer: e.target.value })}
-                                style={{ width: '100%', padding: '0.85rem', borderRadius: '12px', border: '2px solid var(--border)', fontSize: '1rem' }}
-                            >
-                                {participants.map(p => (
-                                    <option key={p.uid} value={p.displayName}>{p.displayName}</option>
-                                ))}
-                                {!participants.find(p => p.displayName === newExpense.payer) && <option value={newExpense.payer}>{newExpense.payer}</option>}
-                            </select>
-                        </div>
-
-                        <div style={{ display: 'flex', gap: '1rem' }}>
-                            <div style={{ flex: 1 }}>
-                                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.5rem' }}>통화</label>
+                            <div>
+                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: '#94a3b8', marginBottom: '0.6rem', marginLeft: '0.2rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>결제자</label>
                                 <select
-                                    value={newExpense.currency}
-                                    onChange={e => setNewExpense({ ...newExpense, currency: e.target.value })}
-                                    style={{ width: '100%', padding: '0.85rem', borderRadius: '12px', border: '2px solid var(--border)', fontSize: '1rem' }}
+                                    value={newExpense.payer}
+                                    onChange={e => setNewExpense({ ...newExpense, payer: e.target.value })}
+                                    style={{ width: '100%', padding: '1rem', borderRadius: '16px', border: '1.5px solid #f1f5f9', fontSize: '1rem', background: '#f8fafc', cursor: 'pointer', appearance: 'none' }}
                                 >
-                                    <option value="KRW">₩ (원)</option>
-                                    <option value="JPY">¥ (엔)</option>
-                                    <option value="USD">$ (달러)</option>
-                                    <option value="CNY">¥ (위안)</option>
+                                    {participants.map(p => (
+                                        <option key={p.uid} value={p.displayName}>{p.displayName}</option>
+                                    ))}
+                                    {!participants.find(p => p.displayName === newExpense.payer) && <option value={newExpense.payer}>{newExpense.payer}</option>}
                                 </select>
                             </div>
-                            <div style={{ flex: 1.5 }}>
-                                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.5rem' }}>금액</label>
-                                <input
-                                    type="number"
-                                    placeholder="0"
-                                    value={newExpense.amount}
-                                    onChange={e => setNewExpense({ ...newExpense, amount: e.target.value })}
-                                    required
-                                    style={{ width: '100%', padding: '0.85rem', borderRadius: '12px', border: '2px solid var(--border)', fontSize: '1rem' }}
-                                />
-                            </div>
-                        </div>
 
-                        {newExpense.currency !== 'KRW' && (
+                            <div style={{ display: 'flex', gap: '1rem' }}>
+                                <div style={{ flex: 1 }}>
+                                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: '#94a3b8', marginBottom: '0.6rem', marginLeft: '0.2rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>통화</label>
+                                    <select
+                                        value={newExpense.currency}
+                                        onChange={e => setNewExpense({ ...newExpense, currency: e.target.value })}
+                                        style={{ width: '100%', padding: '1rem', borderRadius: '16px', border: '1.5px solid #f1f5f9', fontSize: '1rem', background: '#f8fafc', cursor: 'pointer' }}
+                                    >
+                                        <option value="KRW">₩ (원)</option>
+                                        <option value="JPY">¥ (엔)</option>
+                                        <option value="USD">$ (달러)</option>
+                                        <option value="CNY">¥ (위안)</option>
+                                    </select>
+                                </div>
+                                <div style={{ flex: 1.5 }}>
+                                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: '#94a3b8', marginBottom: '0.6rem', marginLeft: '0.2rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>금액</label>
+                                    <input
+                                        type="number"
+                                        placeholder="0"
+                                        value={newExpense.amount}
+                                        onChange={e => setNewExpense({ ...newExpense, amount: e.target.value })}
+                                        required
+                                        style={{ width: '100%', padding: '1rem', borderRadius: '16px', border: '1.5px solid #f1f5f9', fontSize: '1rem', background: '#f8fafc', fontWeight: 700 }}
+                                        onFocus={(e) => { e.target.style.borderColor = 'var(--primary)'; e.target.style.background = 'white'; }}
+                                        onBlur={(e) => { e.target.style.borderColor = '#f1f5f9'; e.target.style.background = '#f8fafc'; }}
+                                    />
+                                </div>
+                            </div>
+
+                            {newExpense.currency !== 'KRW' && (
+                                <div className="animate-fade">
+                                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: '#94a3b8', marginBottom: '0.6rem', marginLeft: '0.2rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>원화 환산</label>
+                                    <div style={{ position: 'relative' }}>
+                                        <span style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', fontWeight: 700, color: '#64748b' }}>₩</span>
+                                        <input
+                                            type="number"
+                                            placeholder="0"
+                                            value={newExpense.amountKRW}
+                                            onChange={e => setNewExpense({ ...newExpense, amountKRW: e.target.value })}
+                                            required
+                                            style={{ width: '100%', padding: '1rem 1rem 1rem 2.2rem', borderRadius: '16px', border: '1.5px solid #f1f5f9', fontSize: '1rem', background: '#f8fafc', fontWeight: 700 }}
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
                             <div>
-                                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.5rem' }}>원화 환산 금액</label>
-                                <input
-                                    type="number"
-                                    placeholder="₩ 0"
-                                    value={newExpense.amountKRW}
-                                    onChange={e => setNewExpense({ ...newExpense, amountKRW: e.target.value })}
-                                    required
-                                    style={{ width: '100%', padding: '0.85rem', borderRadius: '12px', border: '2px solid var(--border)', fontSize: '1rem' }}
-                                />
-                            </div>
-                        )}
-
-                        <div style={{ marginBottom: '1.25rem' }}>
-                            <div style={{ background: 'rgba(0,0,0,0.02)', padding: '0.75rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
-                                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.5rem' }}>정산 대상 선택 (N/1)</label>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: '#94a3b8', marginBottom: '0.8rem', marginLeft: '0.2rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>정산 대상 선택 ({newExpense.splitWith.length}/{participants.length})</label>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.6rem', padding: '0.2rem' }}>
                                     {participants.map(p => {
                                         const isChecked = newExpense.splitWith.includes(p.displayName)
                                         return (
@@ -475,34 +479,43 @@ const ExpenseView = ({ trip, user, onRefreshTrip }) => { // Added onRefreshTrip 
                                                     setNewExpense({ ...newExpense, splitWith: next })
                                                 }}
                                                 style={{
-                                                    padding: '0.4rem 0.8rem',
-                                                    borderRadius: '20px',
-                                                    fontSize: '0.85rem',
+                                                    padding: '0.6rem 1rem',
+                                                    borderRadius: '14px',
+                                                    fontSize: '0.9rem',
+                                                    fontWeight: 700,
                                                     cursor: 'pointer',
-                                                    background: isChecked ? 'var(--primary)' : 'white',
-                                                    color: isChecked ? 'white' : 'var(--text)',
-                                                    border: isChecked ? '1px solid var(--primary)' : '1px solid var(--border)',
+                                                    background: isChecked ? 'var(--primary)' : '#f8fafc',
+                                                    color: isChecked ? 'white' : '#64748b',
+                                                    border: '1.5px solid',
+                                                    borderColor: isChecked ? 'var(--primary)' : '#f1f5f9',
                                                     transition: 'all 0.2s',
                                                     display: 'flex',
                                                     alignItems: 'center',
-                                                    gap: '0.3rem'
+                                                    gap: '0.4rem',
+                                                    boxShadow: isChecked ? '0 4px 12px rgba(37, 99, 235, 0.2)' : 'none'
                                                 }}
                                             >
+                                                {isChecked ? <Check size={14} strokeWidth={3} /> : null}
                                                 {p.displayName}
-                                                {p.displayName === newExpense.payer && <span style={{ fontSize: '0.65rem', opacity: 0.8 }}>(결제자)</span>}
+                                                {p.displayName === newExpense.payer && <span style={{ fontSize: '0.7rem', opacity: isChecked ? 0.9 : 0.6, fontWeight: 500 }}> (결제자)</span>}
                                             </div>
                                         )
                                     })}
                                 </div>
                                 {newExpense.splitWith.length === 0 && (
-                                    <div style={{ fontSize: '0.75rem', color: '#dc2626', marginTop: '0.5rem' }}>
-                                        * 최소 1명 이상 선택해야 합니다.
+                                    <div style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '0.8rem', marginLeft: '0.2rem', fontWeight: 600 }}>
+                                        ⚠️ 최소 1명 이상 선택해야 합니다.
                                     </div>
                                 )}
                             </div>
                         </div>
 
-                        <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '1.1rem', fontSize: '1.1rem', fontWeight: 700, marginTop: '0.5rem' }}>
+                        <button
+                            type="submit"
+                            className="btn btn-primary"
+                            disabled={newExpense.splitWith.length === 0}
+                            style={{ width: '100%', padding: '1.25rem', fontSize: '1.1rem', fontWeight: 800, borderRadius: '18px', marginTop: '0.5rem', boxShadow: '0 10px 25px rgba(37, 99, 235, 0.3)' }}
+                        >
                             저장하기
                         </button>
                     </form>
@@ -514,6 +527,26 @@ const ExpenseView = ({ trip, user, onRefreshTrip }) => { // Added onRefreshTrip 
                 message="이 지출 내역을 삭제하시겠습니까?"
                 onConfirm={confirmDelete}
                 onCancel={() => setDeleteConfig({ isOpen: false, id: null })}
+            />
+
+            <ContextMenu
+                isOpen={contextMenu.isOpen}
+                x={contextMenu.x}
+                y={contextMenu.y}
+                onClose={closeContextMenu}
+                items={[
+                    {
+                        label: '지출 수정',
+                        icon: <Edit2 size={16} />,
+                        onClick: () => handleEditExpense(contextMenu.data)
+                    },
+                    {
+                        label: '지출 삭제',
+                        icon: <Trash2 size={16} />,
+                        color: '#dc2626',
+                        onClick: () => handleDeleteExpense(contextMenu.data.id)
+                    }
+                ]}
             />
         </div>
     )

@@ -6,6 +6,8 @@ import ExpenseView from '../components/ExpenseView'
 import { travelService } from '../services/travelService'
 import { authService } from '../services/authService'
 import ConfirmModal from '../components/ConfirmModal'
+import ContextMenu from '../components/ContextMenu'
+import { useContextMenu } from '../hooks/useContextMenu'
 
 const TripDashboard = ({ user }) => {
     const { tripId } = useParams()
@@ -26,6 +28,8 @@ const TripDashboard = ({ user }) => {
     const [showAddModal, setShowAddModal] = useState(false)
     const [newItem, setNewItem] = useState({ day: '1일차', time: '', activity: '', location: '', group: '전체' })
     const [showDeleteModal, setShowDeleteModal] = useState(false)
+
+    const { contextMenu, onContextMenu, onTouchStart, onTouchEnd, closeContextMenu } = useContextMenu()
 
     useEffect(() => {
         loadTrip()
@@ -339,87 +343,76 @@ const TripDashboard = ({ user }) => {
             <div className="main-content" style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
                 {/* Mobile Header - remains unchanged for mobile feel */}
                 <nav className="glass mobile-only" style={{
-                    position: 'sticky',
+                    position: 'fixed',
                     top: 0,
-                    zIndex: 100,
-                    padding: '0.5rem 1rem',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    width: '100%',
+                    maxWidth: '450px',
+                    zIndex: 1000,
+                    padding: '1rem',
                     display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.25rem',
+                    alignItems: 'flex-start',
+                    justifyContent: 'space-between',
                     borderBottom: '1px solid var(--border)',
-                    background: 'rgba(255, 255, 255, 0.95)',
-                    backdropFilter: 'blur(10px)'
+                    background: 'rgba(255, 255, 255, 0.98)',
+                    backdropFilter: 'blur(15px)'
                 }}>
-                    <button
-                        onClick={() => navigate('/')}
-                        style={{ padding: '0.4rem', display: 'flex', alignItems: 'center', background: 'transparent', border: 'none', cursor: 'pointer', flexShrink: 0, marginLeft: '-0.3rem' }}
-                    >
-                        <ChevronLeft size={24} />
-                    </button>
+                    {/* Left Section: Back Button */}
+                    <div style={{ flexShrink: 0 }}>
+                        <button
+                            onClick={() => navigate('/')}
+                            style={{ padding: '0.4rem', marginLeft: '-0.4rem', display: 'flex', alignItems: 'center', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text)' }}
+                        >
+                            <ChevronLeft size={28} />
+                        </button>
+                    </div>
+
+                    {/* Right Section: Trip Info */}
                     {isEditing ? (
-                        <div style={{ flex: 1, display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem', marginLeft: '1rem' }}>
                             <input
                                 value={editName}
                                 onChange={(e) => setEditName(e.target.value)}
-                                style={{ padding: '0.25rem 0.5rem', borderRadius: '4px', border: '1px solid var(--primary)', fontSize: '1.125rem', minWidth: '150px', flex: '1 1 auto' }}
+                                style={{ padding: '0.35rem 0.6rem', borderRadius: '8px', border: '2px solid var(--primary)', fontSize: '1rem', width: '100%', maxWidth: '220px', textAlign: 'right' }}
                             />
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                                 <input
                                     type="date"
                                     value={editStartDate}
                                     onChange={(e) => setEditStartDate(e.target.value)}
-                                    style={{ padding: '0.25rem 0.5rem', borderRadius: '4px', border: '1px solid var(--primary)', fontSize: '0.8rem' }}
+                                    style={{ padding: '0.2rem 0.4rem', borderRadius: '4px', border: '1px solid var(--border)', fontSize: '0.75rem', width: 'auto' }}
                                 />
                                 <span style={{ color: 'var(--text-muted)' }}>-</span>
                                 <input
                                     type="date"
                                     value={editEndDate}
                                     onChange={(e) => setEditEndDate(e.target.value)}
-                                    style={{ padding: '0.25rem 0.5rem', borderRadius: '4px', border: '1px solid var(--primary)', fontSize: '0.8rem' }}
+                                    style={{ padding: '0.2rem 0.4rem', borderRadius: '4px', border: '1px solid var(--border)', fontSize: '0.75rem', width: 'auto' }}
                                 />
-                            </div>
-                            <div style={{ display: 'flex', gap: '0.25rem', marginLeft: 'auto' }}>
-                                <button onClick={handleUpdateTrip} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary)' }}><Save size={20} /></button>
-                                <button onClick={() => setIsEditing(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}><X size={20} /></button>
+                                <div style={{ display: 'flex', gap: '0.4rem', marginLeft: '0.5rem' }}>
+                                    <button onClick={handleUpdateTrip} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary)' }}><Save size={20} /></button>
+                                    <button onClick={() => setIsEditing(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}><X size={20} /></button>
+                                </div>
                             </div>
                         </div>
                     ) : (
-                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.4rem', minWidth: 0 }}>
-                            <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
-                                <h2 style={{ fontSize: '0.95rem', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: 700 }}>{trip.name}</h2>
-                                <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                                    {trip.date} <span style={{ color: 'var(--primary)', fontWeight: 600 }}>({tripDuration - 1}박 {tripDuration}일)</span>
-                                </span>
-                                {isOwner && (
-                                    <button onClick={() => setIsEditing(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '0.1rem', flexShrink: 0 }}>
-                                        <Edit2 size={12} />
-                                    </button>
-                                )}
+                        <div
+                            style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px', minWidth: 0, marginLeft: '1rem', userSelect: 'none', WebkitTouchCallout: 'none' }}
+                            onContextMenu={(e) => isOwner && onContextMenu(e, trip)}
+                            onTouchStart={(e) => isOwner && onTouchStart(e, trip)}
+                            onTouchEnd={onTouchEnd}
+                        >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%', justifyContent: 'flex-end' }}>
+                                <h2 style={{ fontSize: '1.1rem', margin: 0, fontWeight: 800, color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{trip.name}</h2>
                             </div>
-                            {isOwner && (
-                                <button
-                                    onClick={handleDeleteTrip}
-                                    style={{
-                                        padding: '0.4rem',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        background: 'transparent',
-                                        border: 'none',
-                                        cursor: 'pointer',
-                                        color: '#dc2626',
-                                        flexShrink: 0,
-                                        position: 'relative',
-                                        zIndex: 200,
-                                        pointerEvents: 'auto'
-                                    }}
-                                >
-                                    <Trash2 size={18} />
-                                </button>
-                            )}
+                            <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600, textAlign: 'right' }}>
+                                {trip.date} <span style={{ color: 'var(--primary)', fontWeight: 800 }}>({tripDuration - 1}박 {tripDuration}일)</span>
+                            </div>
                         </div>
                     )}
                 </nav>
-                <main className="container" style={{ flex: 1, paddingBottom: '7rem', paddingTop: '0.75rem', width: '100%', maxWidth: '1200px', margin: '0 auto' }}>
+                <main className="container" style={{ flex: 1, paddingBottom: 'calc(11rem + env(safe-area-inset-bottom, 32px))', paddingTop: '8.5rem', width: '100%', maxWidth: '450px', margin: '0 auto' }}>
                     {activeTab === 'itinerary' && (
                         <>
                             <ItineraryView trip={trip} onRefreshTrip={loadTrip} />
@@ -588,14 +581,19 @@ const TripDashboard = ({ user }) => {
                 <footer className="glass mobile-only" style={{
                     position: 'fixed',
                     bottom: 0,
-                    left: 0,
+                    left: '50%',
+                    transform: 'translateX(-50%)',
                     width: '100%',
-                    zIndex: 2147483647, /* Max Z-Index */
-                    background: 'rgba(255, 255, 255, 0.95)',
-                    backdropFilter: 'blur(20px)',
-                    borderTop: '1px solid rgba(0,0,0,0.05)',
-                    paddingBottom: 'env(safe-area-inset-bottom, 20px)',
-                    display: 'block'
+                    maxWidth: '450px',
+                    zIndex: 2000,
+                    background: 'rgba(255, 255, 255, 0.94)',
+                    backdropFilter: 'blur(25px) saturate(200%)',
+                    WebkitBackdropFilter: 'blur(25px) saturate(200%)',
+                    borderTop: '1px solid rgba(0,0,0,0.08)',
+                    paddingBottom: 'calc(env(safe-area-inset-bottom, 24px) + 12px)',
+                    paddingTop: '8px',
+                    display: 'block',
+                    boxShadow: '0 -15px 35px rgba(0, 0, 0, 0.12)'
                 }}>
                     <NavContent />
                 </footer>
@@ -605,6 +603,26 @@ const TripDashboard = ({ user }) => {
                     message="정말로 이 여행을 삭제하시겠습니까? 관련 데이터가 모두 삭제됩니다."
                     onConfirm={confirmDeleteTrip}
                     onCancel={() => setShowDeleteModal(false)}
+                />
+
+                <ContextMenu
+                    isOpen={contextMenu.isOpen}
+                    x={contextMenu.x}
+                    y={contextMenu.y}
+                    onClose={closeContextMenu}
+                    items={[
+                        {
+                            label: '여행 정보 수정',
+                            icon: <Edit2 size={16} />,
+                            onClick: () => setIsEditing(true)
+                        },
+                        {
+                            label: '여행 삭제',
+                            icon: <Trash2 size={16} />,
+                            color: '#dc2626',
+                            onClick: handleDeleteTrip
+                        }
+                    ]}
                 />
             </div>
         </div>

@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react'
-import { MapPin, Plus, X, Edit2, Trash2, Settings } from 'lucide-react'
+import { MapPin, Plus, X, Edit2, Trash2, Settings, Check } from 'lucide-react'
 import ConfirmModal from './ConfirmModal'
 import { travelService } from '../services/travelService'
 import { differenceInDays, parse } from 'date-fns'
+import ContextMenu from './ContextMenu'
+import { useContextMenu } from '../hooks/useContextMenu'
 
 const ItineraryView = ({ trip, onRefreshTrip }) => {
     const [filter, setFilter] = useState('전체')
@@ -42,6 +44,8 @@ const ItineraryView = ({ trip, onRefreshTrip }) => {
     // Modal & Delete State
     const [deleteConfig, setDeleteConfig] = useState({ isOpen: false, type: null, id: null, message: '' })
 
+    const { contextMenu, onContextMenu, onTouchStart, onTouchEnd, closeContextMenu } = useContextMenu()
+
     // Filter out '전체' from DB data to prevent duplicates with virtual '전체'
     const savedGroups = (trip.groups || []).filter(g => g !== '전체')
     // '전체' is virtual, used for UI only
@@ -58,10 +62,13 @@ const ItineraryView = ({ trip, onRefreshTrip }) => {
 
     const handleAddItem = async (e) => {
         e.preventDefault()
+        const itemToSave = { ...newItem }
+        if (!itemToSave.time) itemToSave.time = '오전 10:00'
+
         if (editingItem) {
-            await travelService.updateItineraryItem(trip.id, editingItem.id, newItem)
+            await travelService.updateItineraryItem(trip.id, editingItem.id, itemToSave)
         } else {
-            await travelService.addItineraryItem(trip.id, newItem)
+            await travelService.addItineraryItem(trip.id, itemToSave)
         }
         setShowAddForm(false)
         setEditingItem(null)
@@ -160,27 +167,28 @@ const ItineraryView = ({ trip, onRefreshTrip }) => {
         }
     }
 
-    const filteredItems = (filter === '전체' ? itinerary : itinerary.filter(item => item.group === filter)).sort((a, b) => {
+    // Helper: Sort by Time (오전/오후 HH:MM -> 24h)
+    const getTimeValue = (timeStr) => {
+        if (!timeStr) return 0;
+        const parts = timeStr.split(' ');
+        if (parts.length < 2) return 0;
+        const ampm = parts[0];
+        const [h, m] = parts[1].split(':').map(Number);
+        let hour = h;
+        if (ampm === '오후' && hour !== 12) hour += 12;
+        if (ampm === '오전' && hour === 12) hour = 0;
+        return hour * 60 + (m || 0);
+    };
+
+    const filteredItems = (filter === '전체' ? itinerary : itinerary.filter(item => item.group === filter || item.group === '전체')).sort((a, b) => {
         // Sort by Day (1일차, 2일차...)
         const dayA = parseInt(a.day.replace('일차', '')) || 0;
         const dayB = parseInt(b.day.replace('일차', '')) || 0;
         if (dayA !== dayB) return dayA - dayB;
 
-        // Sort by Time (오전/오후 HH:MM -> 24h)
-        const getTimeValue = (timeStr) => {
-            if (!timeStr) return 0;
-            const parts = timeStr.split(' ');
-            if (parts.length < 2) return 0;
-            const ampm = parts[0];
-            const [h, m] = parts[1].split(':').map(Number);
-            let hour = h;
-            if (ampm === '오후' && hour !== 12) hour += 12;
-            if (ampm === '오전' && hour === 12) hour = 0;
-            return hour * 60 + (m || 0);
-        };
-
         return getTimeValue(a.time) - getTimeValue(b.time);
     });
+
 
     return (
         <div className="itinerary-view">
@@ -204,50 +212,43 @@ const ItineraryView = ({ trip, onRefreshTrip }) => {
                 </button>
             </div>
 
-            <div className="timeline grid grid-cols-1 lg-grid-cols-2" style={{ gap: '0.75rem' }}>
+            <div className="timeline grid grid-cols-1" style={{ gap: '1rem' }}>
                 {filteredItems.length > 0 ? filteredItems.map((item) => (
-                    <div key={item.id} className="card glass animate-fade" style={{ display: 'flex', gap: '1rem', position: 'relative', margin: 0 }}>
-                        <div style={{ minWidth: '70px', textAlign: 'center' }}>
-                            <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{item.time}</div>
-                            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{item.day}</div>
+                    <div
+                        key={item.id}
+                        className="card glass"
+                        style={{
+                            display: 'flex',
+                            gap: '1.25rem',
+                            position: 'relative',
+                            margin: 0,
+                            padding: '1.25rem',
+                            userSelect: 'none',
+                            WebkitTouchCallout: 'none'
+                        }}
+                        onContextMenu={(e) => onContextMenu(e, item)}
+                        onTouchStart={(e) => onTouchStart(e, item)}
+                        onTouchEnd={onTouchEnd}
+                    >
+                        <div style={{ flex: '0 0 85px', width: '85px', textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'center', borderRight: '1px solid var(--border)', paddingRight: '0.5rem' }}>
+                            <div style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 600, marginBottom: '2px', textTransform: 'uppercase' }}>{item.day}</div>
+                            <div style={{ fontWeight: 800, fontSize: '1rem', color: '#1e293b', whiteSpace: 'nowrap', lineHeight: 1.2 }}>{item.time}</div>
                         </div>
                         <div style={{ flex: 1 }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                <h4 style={{ margin: 0 }}>{item.activity}</h4>
-                                <div style={{ display: 'flex', gap: '0.25rem' }}>
-                                    <button onClick={() => handleEditItem(item)} style={{ background: 'none', border: 'none', padding: '0.25rem', color: 'var(--text-muted)', cursor: 'pointer' }}>
-                                        <Edit2 size={14} />
-                                    </button>
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleDeleteItem(item.id);
-                                        }}
-                                        style={{
-                                            background: 'none',
-                                            border: 'none',
-                                            padding: '0.25rem',
-                                            color: '#dc2626',
-                                            cursor: 'pointer',
-                                            position: 'relative',
-                                            zIndex: 10
-                                        }}
-                                    >
-                                        <Trash2 size={14} />
-                                    </button>
-                                </div>
+                                <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: '#334155' }}>{item.activity}</h4>
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
-                                <MapPin size={12} /> {item.location}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.9rem', color: '#64748b', marginTop: '0.5rem' }}>
+                                <MapPin size={14} style={{ color: '#94a3b8' }} /> {item.location}
                             </div>
-                            <div style={{ marginTop: '0.5rem' }}>
+                            <div style={{ marginTop: '0.75rem' }}>
                                 <span style={{
-                                    fontSize: '0.65rem',
-                                    padding: '0.2rem 0.6rem',
+                                    fontSize: '0.7rem',
+                                    padding: '0.3rem 0.8rem',
                                     borderRadius: '20px',
-                                    background: 'rgba(37, 99, 235, 0.1)',
+                                    background: 'rgba(37, 99, 235, 0.08)',
                                     color: 'var(--primary)',
-                                    fontWeight: 700
+                                    fontWeight: 800
                                 }}>
                                     {item.group}
                                 </span>
@@ -261,27 +262,27 @@ const ItineraryView = ({ trip, onRefreshTrip }) => {
                 )}
             </div>
 
-            <button onClick={() => { setEditingItem(null); setNewItem({ day: tripDays[0], time: '', activity: '', location: '', group: filter === '전체' ? '전체' : filter }); setShowAddForm(true); }} className="btn btn-primary" style={{ width: '100%', padding: '1rem', marginTop: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+            <button onClick={() => { setEditingItem(null); setNewItem({ day: tripDays[0], time: '오전 10:00', activity: '', location: '', group: filter === '전체' ? '전체' : filter }); setShowAddForm(true); }} className="btn btn-primary" style={{ width: '100%', padding: '1rem', marginTop: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
                 <Plus size={18} /> 일정 추가하기
             </button>
 
             {/* 일정 추가/수정 모달 */}
             {showAddForm && (
-                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
-                    <form onSubmit={handleAddItem} className="card glass" style={{ width: '100%', maxWidth: '400px', background: 'white', display: 'flex', flexDirection: 'column', gap: '1.25rem', padding: '2rem' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', alignItems: 'center' }}>
-                            <h3 style={{ margin: 0, fontSize: '1.3rem' }}>일정 {editingItem ? '수정' : '추가'}</h3>
-                            <button type="button" onClick={() => setShowAddForm(false)} style={{ background: 'none', border: 'none', padding: '0.5rem', cursor: 'pointer' }}><X size={24} /></button>
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem', backdropFilter: 'blur(4px)' }}>
+                    <form onSubmit={handleAddItem} className="card glass animate-fade" style={{ width: '100%', maxWidth: '400px', background: 'white', display: 'flex', flexDirection: 'column', gap: '1.25rem', padding: '2rem', borderRadius: '32px', boxShadow: '0 20px 50px rgba(0,0,0,0.2)', border: 'none' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.2rem', alignItems: 'center' }}>
+                            <h3 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 900, letterSpacing: '-0.02em', color: '#1e293b' }}>일정 {editingItem ? '수정' : '추가'}</h3>
+                            <button type="button" onClick={() => setShowAddForm(false)} style={{ background: 'rgba(0,0,0,0.05)', border: 'none', padding: '0.5rem', borderRadius: '50%', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={20} /></button>
                         </div>
 
                         <div>
-                            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.5rem' }}>날짜 및 시간</label>
+                            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: '#94a3b8', marginBottom: '0.6rem', marginLeft: '0.2rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>날짜 및 시간</label>
                             <div style={{ display: 'flex', gap: '0.75rem' }}>
                                 <select
                                     value={newItem.day}
                                     onChange={e => setNewItem({ ...newItem, day: e.target.value })}
                                     required
-                                    style={{ flex: 1, padding: '0.85rem', borderRadius: '12px', border: '1px solid var(--border)', fontSize: '1rem', background: 'white' }}
+                                    style={{ flex: 1, padding: '1rem', borderRadius: '16px', border: '1.5px solid #f1f5f9', fontSize: '1rem', background: '#f8fafc', fontWeight: 600 }}
                                 >
                                     {tripDays.map(day => <option key={day} value={day}>{day}</option>)}
                                 </select>
@@ -319,73 +320,87 @@ const ItineraryView = ({ trip, onRefreshTrip }) => {
                                         }
                                     }}
                                     required
-                                    style={{ flex: 1.5, padding: '0.85rem', borderRadius: '12px', border: '1px solid var(--border)', fontSize: '1rem', background: 'white', minHeight: '50px', cursor: 'pointer' }}
+                                    style={{ flex: 1.5, padding: '1rem', borderRadius: '16px', border: '1.5px solid #f1f5f9', fontSize: '1rem', background: '#f8fafc', minHeight: '50px', cursor: 'pointer', fontWeight: 600 }}
                                 />
                             </div>
                         </div>
 
                         <div>
-                            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.5rem' }}>활동 내용</label>
+                            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: '#94a3b8', marginBottom: '0.6rem', marginLeft: '0.2rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>활동 내용</label>
                             <input
                                 placeholder="무엇을 하나요?"
                                 value={newItem.activity}
                                 onChange={e => setNewItem({ ...newItem, activity: e.target.value })}
                                 required
-                                style={{ width: '100%', padding: '0.85rem' }}
+                                style={{ width: '100%', padding: '1rem', borderRadius: '16px', border: '1.5px solid #f1f5f9', fontSize: '1rem', background: '#f8fafc', transition: 'all 0.2s' }}
+                                onFocus={(e) => { e.target.style.borderColor = 'var(--primary)'; e.target.style.background = 'white'; }}
+                                onBlur={(e) => { e.target.style.borderColor = '#f1f5f9'; e.target.style.background = '#f8fafc'; }}
                             />
                         </div>
 
                         <div>
-                            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.5rem' }}>장소</label>
-                            <input
-                                placeholder="장소 이름"
-                                value={newItem.location}
-                                onChange={e => setNewItem({ ...newItem, location: e.target.value })}
-                                style={{ width: '100%', padding: '0.85rem' }}
-                            />
+                            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: '#94a3b8', marginBottom: '0.6rem', marginLeft: '0.2rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>장소</label>
+                            <div style={{ position: 'relative' }}>
+                                <MapPin size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                                <input
+                                    placeholder="장소 이름"
+                                    value={newItem.location}
+                                    onChange={e => setNewItem({ ...newItem, location: e.target.value })}
+                                    style={{ width: '100%', padding: '1rem 1rem 1rem 2.8rem', borderRadius: '16px', border: '1.5px solid #f1f5f9', fontSize: '1rem', background: '#f8fafc', transition: 'all 0.2s' }}
+                                    onFocus={(e) => { e.target.style.borderColor = 'var(--primary)'; e.target.style.background = 'white'; }}
+                                    onBlur={(e) => { e.target.style.borderColor = '#f1f5f9'; e.target.style.background = '#f8fafc'; }}
+                                />
+                            </div>
                         </div>
 
                         <div>
-                            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.5rem' }}>대상 그룹</label>
+                            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: '#94a3b8', marginBottom: '0.6rem', marginLeft: '0.2rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>대상 그룹</label>
                             <select
                                 value={newItem.group}
                                 onChange={e => setNewItem({ ...newItem, group: e.target.value })}
-                                style={{ width: '100%', padding: '0.85rem' }}
+                                style={{ width: '100%', padding: '1rem', borderRadius: '16px', border: '1.5px solid #f1f5f9', fontSize: '1rem', background: '#f8fafc' }}
                             >
                                 {displayGroups.map(g => <option key={g} value={g}>{g}</option>)}
                             </select>
                         </div>
 
-                        <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '1.2rem', fontSize: '1.1rem', fontWeight: 700, marginTop: '1rem' }}>저장하기</button>
+                        <button
+                            type="submit"
+                            className="btn btn-primary"
+                            style={{ width: '100%', padding: '1.25rem', fontSize: '1.1rem', fontWeight: 800, borderRadius: '18px', marginTop: '0.5rem', boxShadow: '0 10px 25px rgba(37, 99, 235, 0.3)' }}
+                        >
+                            저장하기
+                        </button>
                     </form>
                 </div>
             )}
 
             {/* 그룹 관리 모달 */}
             {showGroupSettings && (
-                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
-                    <div className="card glass" style={{ width: '100%', maxWidth: '400px', background: 'white' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-                            <h3 style={{ margin: 0 }}>그룹 관리</h3>
-                            <button onClick={() => setShowGroupSettings(false)} style={{ background: 'none', border: 'none' }}><X size={20} /></button>
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem', backdropFilter: 'blur(4px)' }}>
+                    <div className="card glass animate-fade" style={{ width: '100%', maxWidth: '400px', background: 'white', padding: '2rem', borderRadius: '32px', boxShadow: '0 20px 50px rgba(0,0,0,0.2)', border: 'none' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', alignItems: 'center' }}>
+                            <h3 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 900, letterSpacing: '-0.02em', color: '#1e293b' }}>그룹 관리</h3>
+                            <button onClick={() => setShowGroupSettings(false)} style={{ background: 'rgba(0,0,0,0.05)', border: 'none', padding: '0.5rem', borderRadius: '50%', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={20} /></button>
                         </div>
 
                         <div style={{ marginBottom: '1.5rem' }}>
-                            <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>새 그룹 추가</label>
+                            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: '#94a3b8', marginBottom: '0.6rem', marginLeft: '0.2rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>새 그룹 추가</label>
                             <div style={{ display: 'flex', gap: '0.5rem' }}>
                                 <input
                                     placeholder="그룹 이름 (예: 니세코)"
                                     value={newGroup}
                                     onChange={e => setNewGroup(e.target.value)}
+                                    style={{ flex: 1, padding: '0.8rem 1rem', borderRadius: '14px', border: '1.5px solid #f1f5f9', fontSize: '0.95rem', background: '#f8fafc' }}
                                 />
-                                <button onClick={handleAddGroup} className="btn btn-primary" style={{ padding: '0.6rem 1rem' }}>추가</button>
+                                <button onClick={handleAddGroup} className="btn btn-primary" style={{ padding: '0.8rem 1.2rem', borderRadius: '14px', fontWeight: 700 }}>추가</button>
                             </div>
                         </div>
 
-                        <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>그룹 목록</label>
+                        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: '#94a3b8', marginBottom: '0.6rem', marginLeft: '0.2rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>그룹 목록</label>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                             {savedGroups.length > 0 ? savedGroups.map(g => (
-                                <div key={g} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem', borderRadius: '8px', background: 'rgba(0,0,0,0.02)' }}>
+                                <div key={g} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.85rem 1rem', borderRadius: '16px', background: '#f8fafc', border: '1px solid #f1f5f9' }}>
                                     {editingGroup && editingGroup.oldName === g ? (
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%' }}>
                                             <input
@@ -394,8 +409,8 @@ const ItineraryView = ({ trip, onRefreshTrip }) => {
                                                 autoFocus
                                                 style={{ flex: 1, padding: '0.4rem', borderRadius: '4px', border: '1px solid var(--primary)', fontSize: '0.9rem' }}
                                             />
-                                            <button onClick={handleUpdateGroup} style={{ background: 'var(--primary)', color: 'white', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}>저장</button>
-                                            <button onClick={() => setEditingGroup(null)} style={{ background: 'var(--text-muted)', color: 'white', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}>취소</button>
+                                            <button onClick={handleUpdateGroup} style={{ background: 'var(--primary)', color: 'white', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}>저장</button>
+                                            <button onClick={() => setEditingGroup(null)} style={{ background: '#e2e8f0', color: '#64748b', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}>취소</button>
                                         </div>
                                     ) : (
                                         <>
@@ -428,6 +443,26 @@ const ItineraryView = ({ trip, onRefreshTrip }) => {
                 message={deleteConfig.message}
                 onConfirm={confirmDelete}
                 onCancel={() => setDeleteConfig({ ...deleteConfig, isOpen: false })}
+            />
+
+            <ContextMenu
+                isOpen={contextMenu.isOpen}
+                x={contextMenu.x}
+                y={contextMenu.y}
+                onClose={closeContextMenu}
+                items={[
+                    {
+                        label: '일정 수정',
+                        icon: <Edit2 size={16} />,
+                        onClick: () => handleEditItem(contextMenu.data)
+                    },
+                    {
+                        label: '일정 삭제',
+                        icon: <Trash2 size={16} />,
+                        color: '#dc2626',
+                        onClick: () => handleDeleteItem(contextMenu.data.id)
+                    }
+                ]}
             />
         </div>
     )
