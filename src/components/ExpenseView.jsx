@@ -372,8 +372,34 @@ const ExpenseView = ({ trip, user, onRefreshTrip }) => { // Added onRefreshTrip 
             {/* Mobile View: Tabbed */}
             <div className="mobile-only">
                 <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
-                    <button className={`btn ${view === 'list' ? 'btn-primary' : 'glass'} `} onClick={() => setView('list')}>지출 내역</button>
-                    <button className={`btn ${view === 'summary' ? 'btn-primary' : 'glass'} `} onClick={() => setView('summary')}>정산 현황</button>
+                    <button
+                        className={`btn ${view === 'list' ? 'btn-primary' : 'glass'} `}
+                        onClick={() => setView('list')}
+                        style={{
+                            padding: '0.6rem 1.1rem',
+                            borderRadius: '24px',
+                            fontSize: '0.9rem',
+                            fontWeight: 600,
+                            border: 'none',
+                            boxShadow: view === 'list' ? '0 4px 12px rgba(37, 99, 235, 0.3)' : '0 2px 5px rgba(0,0,0,0.03)'
+                        }}
+                    >
+                        지출 내역
+                    </button>
+                    <button
+                        className={`btn ${view === 'summary' ? 'btn-primary' : 'glass'} `}
+                        onClick={() => setView('summary')}
+                        style={{
+                            padding: '0.6rem 1.1rem',
+                            borderRadius: '24px',
+                            fontSize: '0.9rem',
+                            fontWeight: 600,
+                            border: 'none',
+                            boxShadow: view === 'summary' ? '0 4px 12px rgba(37, 99, 235, 0.3)' : '0 2px 5px rgba(0,0,0,0.03)'
+                        }}
+                    >
+                        정산 현황
+                    </button>
                 </div>
                 {view === 'list' ? <ListView /> : <SummaryView />}
             </div>

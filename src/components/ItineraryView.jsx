@@ -198,7 +198,15 @@ const ItineraryView = ({ trip, onRefreshTrip }) => {
                         key={g}
                         onClick={() => setFilter(g)}
                         className={`btn ${filter === g ? 'btn-primary' : 'glass'}`}
-                        style={{ whiteSpace: 'nowrap', fontSize: '0.875rem' }}
+                        style={{
+                            whiteSpace: 'nowrap',
+                            fontSize: '0.9rem',
+                            padding: '0.6rem 1.1rem',
+                            borderRadius: '24px',
+                            fontWeight: 600,
+                            border: 'none',
+                            boxShadow: filter === g ? '0 4px 12px rgba(37, 99, 235, 0.3)' : '0 2px 5px rgba(0,0,0,0.03)'
+                        }}
                     >
                         {g === '전체' ? '전체 일정' : `${g}`}
                     </button>
